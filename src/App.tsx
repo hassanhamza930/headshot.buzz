@@ -5,9 +5,9 @@ import { ReactMediaRecorder, useReactMediaRecorder } from 'react-media-recorder'
 import Webcam from 'react-webcam';
 import { useRecoilState } from 'recoil';
 import { linesAtom } from './atoms';
+import { BsArrowRight } from 'react-icons/bs';
 
-
-const videoComponentStyling = "w-full h-full rounded-md bg-black shadow-indigo-600 shadow-lg";
+const videoComponentStyling = "w-full h-full rounded-md bg-black shadow-indigo-600 shadow-lg relative z-0";
 
 
 const VideoPreview = ({ stream }: { stream: MediaStream | null }) => {
@@ -21,14 +21,44 @@ const VideoPreview = ({ stream }: { stream: MediaStream | null }) => {
   if (!stream) {
     return null;
   }
-  return <video id="mirrored" ref={videoRef} className={videoComponentStyling} autoPlay controls />;
+  return <video id="mirrored" ref={videoRef} className={videoComponentStyling} autoPlay />;
 };
+
+
+
+function LinesPreview() {
+
+  const [lines, setlines] = useRecoilState(linesAtom);
+  const [index, setindex] = useState(0);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setindex(index+1)
+    }, 2000);
+  }, [index])
+
+  return (
+    <div className='bg-gradient-to-b from-black to-black/50 absolute z-10 h-full w-full rounded-md flex flex-col justify-between items-start p-10'>
+      <div className='text-6xl font-bold text-white tracking-tight'>
+        {
+          lines[index]
+        }
+      </div>
+      <div className='w-full flex justify-end items-end'>
+        <div className='bg-white px-4 py-1 text-black rounded-full flex flex-row justify-start items-center gap-2'>{lines.length-index} More <BsArrowRight/></div>
+      </div>
+    </div>
+  );
+}
 
 
 
 function VideoComponent() {
   const { status, startRecording, stopRecording, mediaBlobUrl, previewStream } = useReactMediaRecorder({ video: { width: 1920, height: 1080 }, askPermissionOnMount: true, blobPropertyBag: { type: "video/webm" } });
- 
+
+
+
+
   const downloadVideo = async () => {
     console.log(mediaBlobUrl);
     if (mediaBlobUrl) {
@@ -62,8 +92,14 @@ function VideoComponent() {
       </div>
       <div className='h-[60%]'>
         {status === "stopped" && mediaBlobUrl && <video className={videoComponentStyling} src={mediaBlobUrl} controls autoPlay />}
-        {status =="idle" && <VideoPreview stream={previewStream} />}
-        {status =="recording" && <VideoPreview stream={previewStream} />}
+        {status == "idle" && <VideoPreview stream={previewStream} />}
+        {
+          status == "recording" &&
+          <div className='h-full w-full relative flex justify-center items-center'>
+            <VideoPreview stream={previewStream} />
+            <LinesPreview />
+          </div>
+        }
       </div>
 
     </div>
@@ -103,22 +139,22 @@ function App() {
 
 
 
+
   return (
-    <div className='h-screen w-full flex flex-col gap-2 justify-start items-center bg-white p-10'>
+    <>
+      <div className='h-screen w-full flex flex-col gap-2 justify-start items-center bg-white p-10'>
 
+        <div className='flex flex-row justify-center items-center gap-5 h-full w-full'>
 
+          <VideoComponent />
 
-      <div className='flex flex-row justify-center items-center gap-5 h-full w-full'>
+          <LinesComponent />
 
-
-       <VideoComponent/>
-
-       <LinesComponent/>
+        </div>
 
       </div>
 
-
-    </div>
+    </>
 
 
   )
