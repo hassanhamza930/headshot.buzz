@@ -41,7 +41,7 @@ const VideoPreview = ({ stream }: { stream: MediaStream | null }) => {
   if (!stream) {
     return null;
   }
-  return <video id="mirrored" ref={videoRef} className={videoComponentStyling} autoPlay />;
+  return <video id="mirrored" ref={videoRef} className={`${videoComponentStyling}`} autoPlay />;
 };
 
 
@@ -86,10 +86,11 @@ function LinesPreview() {
             lines.split("\n").map((line, indexLocal) => {
               if (indexLocal === index) {
                 return <motion.div
+                style={{ fontFamily: "Roboto" }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  key={index} className='absolute z-10 text-4xl font-medium tracking-normal flex flex-wrap justify-start items-start gap-[7px]'>
+                  key={index} className='absolute z-10 text-4xl font-bold tracking-normal flex flex-wrap justify-start items-start gap-[7px]'>
                   {
                     line.split(" ").map((word, index) => {
                       return (
@@ -131,9 +132,11 @@ function LinesPreview() {
 
 function VideoComponent(props: { setIsProDialogOpen: any, isRecording: boolean, setIsRecording: any }) {
   const [loading, setloading] = useState(false);
+  const [format, setformat] = useState("landscape" as "landscape" | "portrait");
 
   const { status, startRecording, stopRecording, mediaBlobUrl, previewStream } = useReactMediaRecorder({
-    video: { width: 1280, height: 720 },
+    // video: { width: 416, height: 640, facingMode: { ideal: "user" } },  this is for vertical video
+    video: { width: {max:1280}, height: {max:720}, facingMode: { ideal: "user" } },
     askPermissionOnMount: true,
     blobPropertyBag: { type: "video/webm" },
   });
@@ -197,12 +200,21 @@ function VideoComponent(props: { setIsProDialogOpen: any, isRecording: boolean, 
       <div className="flex flex-row justify-start items-start gap-3 mt-10">
         {
           status != "recording" && mediaBlobUrl == undefined &&
-          <button className='bg-indigo-600 hover:shadow-2xl hover:shadow-yellow-400/60 text-sm px-6 py-2 rounded-md text-white shadow-xl hover:scale-105 transition-all duration-300'
-            onClick={() => {
-              props.setIsRecording(true);
-              setloading(true);
-            }}
-          >Start Recording</button>
+          <>
+            <button className='bg-indigo-600 border-2 border-indigo-600 hover:shadow-2xl hover:shadow-yellow-400/60 text-sm px-6 py-2 rounded-md text-white shadow-xl hover:scale-105 transition-all duration-300'
+              onClick={() => {
+                props.setIsRecording(true);
+                setloading(true);
+              }}
+            >Start Recording</button>
+
+            <button className='bg-transparent border-2 border-indigo-600 border-dotted-2 text-indigo-600 text-sm px-6 py-2 rounded-md shadow-xl hover:scale-105 transition-all duration-300'
+              onClick={() => {
+                props.setIsProDialogOpen(true);
+              }}
+            >Vertical Mode</button>
+            
+          </>
         }
         {
           status != "recording" && mediaBlobUrl != undefined &&
@@ -272,7 +284,7 @@ function App() {
         <div style={{ fontFamily: "Roboto" }} className='w-[650px] flex flex-col justify-start items-start bg-white  text-indigo-600 shadow-2xl shadow-yellow-400/60 backdrop-blur-xl rounded-xl p-10 tracking-tight'>
           <div className='text-6xl font-bold -ml-1 mb-5 tracking-tight'>Sound 10x more professional on video</div>
           {
-            ["Record in High-Res", "Download in .mp4 format", "Save your videos in your cloud library to share across multiple devices", "AI powered human like scripts to quickly scaffold"].map((point) => {
+            ["Record in Vertical Mode with upto 4k High Res", "Download in .mp4 format", "Save your videos in your cloud library to share across multiple devices", "AI powered human like scripts to quickly scaffold"].map((point) => {
               return (
                 <div className='flex flex-row justify-start items-center gap-2 mt-2'>
                   <FaCrown className='text-md' />
