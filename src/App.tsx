@@ -4,12 +4,30 @@ import { useEffect, useRef, useState } from 'react'
 import { ReactMediaRecorder, useReactMediaRecorder } from 'react-media-recorder';
 import Webcam from 'react-webcam';
 import { useRecoilState } from 'recoil';
-import { linesAtom } from './atoms';
+import { linesTextAtom } from './atoms';
 import { BsArrowRight } from 'react-icons/bs';
 import { AnimatePresence } from 'framer-motion';
 import { motion } from "framer-motion";
+import { GiCrowNest, GiCrown } from 'react-icons/gi';
+import { LuCrown } from 'react-icons/lu';
+import logo from "../public/logo.png";
+import { FaCrown } from 'react-icons/fa6';
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { Timestamp, addDoc, collection, doc, getFirestore } from 'firebase/firestore';
 
-const videoComponentStyling = "w-full h-full rounded-md bg-black shadow-indigo-600 shadow-lg relative z-0";
+const firebaseConfig = {
+  apiKey: "AIzaSyD5TJvxL-schfWC6fYs9Htfmhhx6lN_auc",
+  authDomain: "e-comartstore.firebaseapp.com",
+  projectId: "e-comartstore",
+  storageBucket: "e-comartstore.appspot.com",
+  messagingSenderId: "549977981975",
+  appId: "1:549977981975:web:10ed7b336f471bed1cc852",
+  measurementId: "G-C9DT6YYRDR"
+};
+
+
+const videoComponentStyling = "w-full h-full rounded-md bg-black shadow-xl relative z-0";
 
 
 const VideoPreview = ({ stream }: { stream: MediaStream | null }) => {
@@ -30,13 +48,13 @@ const VideoPreview = ({ stream }: { stream: MediaStream | null }) => {
 
 function LinesPreview() {
 
-  const [lines, setlines] = useRecoilState(linesAtom);
+  const [lines, setlines] = useRecoilState(linesTextAtom);
   const [index, setindex] = useState(0);
 
 
   const escFunction = (event: any) => {
     if (event.key === "ArrowDown") {
-      if (index < lines.length - 1) {
+      if (index < lines.split("\n").length - 1) {
         setindex(index + 1);
       }
     }
@@ -61,34 +79,49 @@ function LinesPreview() {
 
 
   return (
-    <div className='bg-gradient-to-b from-black via-black/80 to-black/50 outline-indigo-600 text-white outline-dotted absolute z-10 h-full w-full rounded-md flex flex-col justify-between items-start p-10'>
+    <div className='bg-gradient-to-b from-indigo-600 via-indigo-600/90 to-indigo-600/50 outline-indigo-600 text-white/90 outline-dotted absolute z-10 h-full w-full rounded-md flex flex-col justify-between items-start p-10'>
       <div className='relative h-full w-full'>
-      <AnimatePresence>
-        {
-          lines.map((line, indexLocal) => {
-            if (indexLocal === index) {
-              return <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                key={index} className='absolute z-10 text-5xl font-medium tracking-tight flex flex-wrap justify-start items-start gap-2'>
-                {
-                  line.split(" ").map((word, index) => {
-                    return (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{delay:index*0.1,duration:0.5}} key={index} className=''>
-                        {word}
-                      </motion.div>
-                    )
-                  })
-                }
-              </motion.div>
-            }
-          })
-        }
-      </AnimatePresence>
-      <div className='w-full flex justify-end items-end relative z-0 h-full'>
-        <div className='bg-white px-4 py-1 text-black rounded-full flex flex-row justify-start items-center gap-2'>{lines.length - index - 1} More <BsArrowRight /></div>
-      </div>
+        <AnimatePresence>
+          {
+            lines.split("\n").map((line, indexLocal) => {
+              if (indexLocal === index) {
+                return <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  key={index} className='absolute z-10 text-4xl font-medium tracking-normal flex flex-wrap justify-start items-start gap-[7px]'>
+                  {
+                    line.split(" ").map((word, index) => {
+                      return (
+                        word.trim() != " " &&
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.1, duration: 0.5 }} key={index} className=''>
+                          {word.trim()}
+                        </motion.div>
+
+                      )
+                    })
+                  }
+                </motion.div>
+              }
+            })
+          }
+        </AnimatePresence>
+        <div className='w-full flex flex-row justify-between items-end relative z-0 h-full'>
+          <div className='flex flex-col justify-start items-start gap-2 w-48 tracking-tight text-xs px-4 py-2 rounded-md bg-indigo-600'>
+
+            <div className='flex flex-row justify-between w-full'>
+              <div className='font-medium'>Next Line</div>
+              <div className='font-light'>Arrow Down</div>
+            </div>
+
+            <div className='flex flex-row justify-between w-full'>
+              <div className='font-medium'>Previous Line</div>
+              <div className='font-light'>Arrow Up</div>
+            </div>
+          </div>
+
+          <div className='bg-white px-4 py-1 text-black rounded-full flex flex-row justify-start items-center gap-2'>{lines.split("\n").length - index - 1} More <BsArrowRight /></div>
+        </div>
       </div>
     </div>
   );
@@ -96,9 +129,11 @@ function LinesPreview() {
 
 
 
-function VideoComponent(props: { setIsRecording: any }) {
+function VideoComponent(props: { setIsProDialogOpen: any, isRecording: boolean, setIsRecording: any }) {
+  const [loading, setloading] = useState(false);
+
   const { status, startRecording, stopRecording, mediaBlobUrl, previewStream } = useReactMediaRecorder({
-    video: { width: 1920, height: 1080 },
+    video: { width: 1280, height: 720 },
     askPermissionOnMount: true,
     blobPropertyBag: { type: "video/webm" },
   });
@@ -119,12 +154,35 @@ function VideoComponent(props: { setIsRecording: any }) {
   };
 
 
+  useEffect(() => {
+    if (loading) {
+      setTimeout(() => {
+        setloading(false);
+        startRecording();
+      }, 2000);
+    }
+  }, [loading])
+
 
   return (
     <div className='h-full flex flex-col justify-start items-start'>
 
 
-      <div className='h-[60%]'>
+      <motion.div animate={{ height: props.isRecording == true ? "80%" : "60%" }} className='relative'>
+        {
+          loading == true &&
+          <div className='h-full w-full flex justify-center items-center absolute z-10 bg-black/90'>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className='text-5xl font-medium tracking-tight text-white/80'>Starting Recording</motion.div>
+          </div>
+        }
+        {
+          status == undefined &&
+          <div className={"h-full w-full bg-black"}></div>
+        }
         {status === "stopped" && mediaBlobUrl && <video className={videoComponentStyling} src={mediaBlobUrl} controls autoPlay />}
         {status == "idle" && <VideoPreview stream={previewStream} />}
         {
@@ -134,27 +192,42 @@ function VideoComponent(props: { setIsRecording: any }) {
             <LinesPreview />
           </div>
         }
-      </div>
+      </motion.div>
 
-      <div className="flex flex-row justify-start items-start gap-3 my-10">
+      <div className="flex flex-row justify-start items-start gap-3 mt-10">
         {
-          status != "recording" &&
-          <button className='bg-blue-600 px-6 py-2 rounded-md text-white shadow-xl hover:scale-105 transition-all duration-300'
+          status != "recording" && mediaBlobUrl == undefined &&
+          <button className='bg-indigo-600 hover:shadow-2xl hover:shadow-yellow-400/60 text-sm px-6 py-2 rounded-md text-white shadow-xl hover:scale-105 transition-all duration-300'
             onClick={() => {
               props.setIsRecording(true);
-              setTimeout(() => {
-                startRecording();
-              }, 700);
+              setloading(true);
             }}
           >Start Recording</button>
         }
         {
           status != "recording" && mediaBlobUrl != undefined &&
-          <button className='bg-black/80 px-6 py-2 rounded-md text-white shadow-xl hover:scale-105 transition-all duration-300' onClick={() => { downloadVideo() }}>Download</button>
+          <button className='bg-indigo-600 hover:shadow-2xl hover:shadow-yellow-400/60 text-sm px-6 py-2 rounded-md text-white shadow-xl hover:scale-105 transition-all duration-300'
+            onClick={() => {
+              props.setIsRecording(true);
+              setloading(true);
+            }}
+          >Restart Recording</button>
+        }
+        {
+          status != "recording" && mediaBlobUrl != undefined &&
+          <button className='bg-indigo-600/20 px-6 py-2 text-sm rounded-md text-indigo-600 hover:scale-105 transition-all duration-300 flex flex-row justify-start items-center' onClick={() => { downloadVideo() }}>Download <div className='text-xs ml-2 '>(.webm)</div></button>
+        }
+        {
+          status != "recording" && mediaBlobUrl != undefined &&
+          <button onClick={() => { props.setIsProDialogOpen(true); }} className='relative flex justify-end items-start hover:scale-105 transition-all duration-300'>
+            <LuCrown className='absolute z-10 text-indigo-600 text-md -mt-3' />
+            <div className='bg-indigo-600/20 px-6 py-2 text-sm rounded-md text-indigo-600  flex flex-row justify-start items-center'>Download <div className='text-xs ml-2 '>(.mp4)</div></div>
+
+          </button>
         }
         {
           status === "recording" &&
-          <button className='bg-red-600 px-6 py-2 rounded-md text-white' onClick={()=>{props.setIsRecording(false);stopRecording();}}>Stop Recording</button>
+          <button className='bg-red-500/10 text-red-500 px-6 text-sm py-2 rounded-md border-red-500 border-2 border-dotted' onClick={() => { props.setIsRecording(false); stopRecording(); }}>Stop Recording</button>
         }
       </div>
 
@@ -166,27 +239,12 @@ function VideoComponent(props: { setIsRecording: any }) {
 
 
 function LinesComponent() {
-  const [lines, setlines] = useRecoilState(linesAtom);
+  const [linesText, setlinesText] = useRecoilState(linesTextAtom);
 
   return (
-    <div className='h-full overflow-y-auto w-96 flex flex-col gap-2 justify-start items-center flex-none rounded-md bg-indigo-600 shadow-2xl p-5 pb-24'>
-      {
-        lines.map((line, index) => {
-          return (
-            <textarea value={line} onChange={(e) => {
-              let temp = [...lines];
-              temp[index] = e.target.value;
-              setlines([...temp]);
-            }} key={index} placeholder='New Line Text' className='flex flex-none w-full h-36 shadow-yellow-400/20 bg-black/60 text-white rounded-md shadow-2xl px-4 py-2'>
-            </textarea>
-          )
-        })
-      }
-      <button onClick={() => {
-        setlines([...lines, ""])
-      }} className='bg-white shadow-2xl shadow-yellow-400/60 rounded-md text-black px-5 py-2 text-sm mt-5 hover:scale-105 transition-all duration-300'>
-        Add new Line +
-      </button>
+    <div className='h-full overflow-y-auto w-[550px] flex flex-col gap-2 justify-start items-center flex-none rounded-md bg-indigo-600 shadow-2xl p-5'>
+      <textarea value={linesText} onChange={(e) => { setlinesText(e.target.value) }} key={"linesText"} placeholder='New Line Text' className='flex flex-none w-full h-full shadow-yellow-400/20 bg-black/20 text-white rounded-md shadow-2xl px-4 py-2'>
+      </textarea>
     </div>
   )
 }
@@ -195,15 +253,77 @@ function LinesComponent() {
 function App() {
 
   const [isRecording, setisRecording] = useState(false);
+  const [proDialogOpen, setproDialogOpen] = useState(false);
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db = getFirestore();
+
+  useEffect(() => {
+    addDoc(collection(db, "visits"), { time: Timestamp.now() })
+  }, [])
+
+
+  function GoProDialog() {
+
+    const [email, setemail] = useState("");
+
+    return (
+      <div className='fixed z-50 h-screen w-full bg-black/80 backdrop-blur-xl flex justify-center items-center'>
+        <div style={{ fontFamily: "Roboto" }} className='w-[650px] flex flex-col justify-start items-start bg-white  text-indigo-600 shadow-2xl shadow-yellow-400/60 backdrop-blur-xl rounded-xl p-10 tracking-tight'>
+          <div className='text-6xl font-bold -ml-1 mb-5 tracking-tight'>Sound 10x more professional on video</div>
+          {
+            ["Record in High-Res", "Download in .mp4 format", "Save your videos in your cloud library to share across multiple devices", "AI powered human like scripts to quickly scaffold"].map((point) => {
+              return (
+                <div className='flex flex-row justify-start items-center gap-2 mt-2'>
+                  <FaCrown className='text-md' />
+                  <div>{point}</div>
+                </div>
+              )
+            })
+          }
+          <input value={email} onChange={(e) => { setemail(e.target.value) }} placeholder='johndoe@gmail.com' className='outline-none mt-10 w-full px-5 py-2 border-[3px] border-indigo-600 border-dotted rounded-xl text-indigo-600' />
+          <div className='flex flex-col justify-center items-start gap-2 w-full mt-5'>
+            <button onClick={async () => {
+              if (email.trim() == "") {
+                return
+              }
+              await addDoc(collection(db, "emails"), {
+                email: email,
+                time: Timestamp.now()
+              });
+              setproDialogOpen(false);
+              alert("Thanks for your interest, Keep an eye on your inbox. We'll get back to out to you soon!")
+            }} className='bg-indigo-600 hover:shadow-2xl hover:shadow-yellow-400/60 text-sm px-6 py-2 rounded-md text-white shadow-xl hover:scale-105 transition-all duration-300'>Get Started</button>
+            <div className='text-xs text-indigo-600'>No credit card required</div>
+            <button onClick={() => { setproDialogOpen(false); }} className='text-md text-indigo-600 underline mt-10'>I'll buy later</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
 
   return (
     <>
-      <div className='h-screen w-full flex flex-col gap-2 justify-start items-center bg-white p-10'>
+      {
+        proDialogOpen == true &&
+        <GoProDialog />
+      }
+      <div className='absolute z-10 w-full flex justify-center items-center'>
+        <div className='w-[50%] rounded-b-xl border-dotted border-[3px] border-t-0 border-indigo-600  h-16 flex flex-row justify-between items-center px-10'>
+          <div className='flex flex-row justify-start items-center gap-2'>
+            <div className='h-8 w-8 rounded-md bg-cover bg-center' style={{ backgroundImage: `url('${logo}')` }}></div>
+            <div style={{ fontFamily: "Roboto" }} className='text-xl font-bold tracking-tight text-indigo-600'>RecordEasy</div>
+          </div>
+          <button onClick={() => { setproDialogOpen(true); }} className='text-sm font-normal tracking-tight  bg-indigo-600 px-10 py-2 rounded-md text-white hover:scale-105 transition-all duration-300 hover:shadow-md hover:shadow-yellow-600/60'>Go Pro</button>
+        </div>
+      </div>
+
+      <div className='h-screen w-full flex flex-col gap-2 justify-start items-center bg-white p-10 pt-24'>
 
         <div className='flex flex-row justify-center items-start gap-5 h-full w-full'>
 
-          <VideoComponent setIsRecording={setisRecording} />
+          <VideoComponent setIsProDialogOpen={setproDialogOpen} isRecording={isRecording} setIsRecording={setisRecording} />
 
           {
             isRecording === false &&
