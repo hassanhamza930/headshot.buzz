@@ -136,7 +136,7 @@ function VideoComponent(props: { setIsProDialogOpen: any, isRecording: boolean, 
 
   const { status, startRecording, stopRecording, mediaBlobUrl, previewStream } = useReactMediaRecorder({
     // video: { width: 416, height: 640, facingMode: { ideal: "user" } },  this is for vertical video
-    video: { width: {max:1280}, height: {max:720}, facingMode: { ideal: "user" } },
+    video: { width: {ideal:1280}, height: {ideal:720} },
     askPermissionOnMount: true,
     blobPropertyBag: { type: "video/webm" },
   });
